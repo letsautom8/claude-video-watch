@@ -70,8 +70,10 @@ uv run skills/watch/scripts/watch.py <file or URL> --out ./watch-test \
 
 ## Limits
 
-- **Links:** yt-dlp handles YouTube, TikTok, Instagram, Facebook, X and most public
-  video pages. Private, login-only and DRM videos fail; give Claude the file instead.
+- **Links:** yt-dlp handles YouTube, TikTok, Instagram, X and most public video pages.
+  Facebook breaks whenever Facebook changes its pages, until yt-dlp catches up. Private,
+  login-only and DRM videos fail. In all of these cases, give Claude the file instead
+  (a download or a screen recording).
   YouTube works best with [deno](https://deno.com) installed (yt-dlp warns without it).
 - **What it can't perceive:** tone of voice, music and sound effects aren't transcribed,
   and frames miss motion between samples. The skill tells Claude to say so instead of

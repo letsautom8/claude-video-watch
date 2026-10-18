@@ -89,8 +89,14 @@ def loudness(video: Path) -> str:
     return f"{m[-1]} LUFS integrated" if m else "n/a"
 
 
-def grab(video: Path, t: float, out: Path) -> None:
-    ff("-y", "-ss", f"{t:.3f}", "-i", str(video), "-frames:v", "1", "-vf", f"scale={THUMB_W}:-2", str(out))
+def grab(video: Path, t: float, out: Path, dur: float) -> bool:
+    """One frame at t. The container can run past the last decodable frame, so a seek near
+    the end may write nothing: retry a little earlier, and report whether a frame exists."""
+    for at in (min(t, dur - 0.2), max(0.0, dur - 1.0)):
+        ff("-y", "-ss", f"{max(at, 0.0):.3f}", "-i", str(video), "-frames:v", "1", "-vf", f"scale={THUMB_W}:-2", str(out))
+        if out.exists():
+            return True
+    return False
 
 
 def label_font(size: int):
@@ -182,8 +188,8 @@ def main() -> None:
         for k in range(n):
             t = s + (e - s) * (k + 0.5) / n
             f = out / "frames" / f"shot-{i:03d}-{k}.jpg"
-            grab(video, t, f)
-            frames.append((t, f))
+            if grab(video, t, f, dur):
+                frames.append((t, f))
     for n in range(0, len(frames), PER_SHEET):
         sheet(frames[n:n + PER_SHEET], out / f"sheet-{n // PER_SHEET + 1}.jpg")
 
@@ -192,9 +198,10 @@ def main() -> None:
     for i, t in enumerate([0.1, 0.5, 1.0, 1.5, 2.0, 2.5]):
         if t < dur:
             f = out / "frames" / f"hook-{i}.jpg"
-            grab(video, t, f)
-            hook.append((t, f))
-    sheet(hook, out / "hook.jpg", cols=6)
+            if grab(video, t, f, dur):
+                hook.append((t, f))
+    if hook:
+        sheet(hook, out / "hook.jpg", cols=6)
 
     # Sound: transcript with timestamps, silences, loudness.
     words, lang = transcribe(video, a.model) if has_audio else ([], "n/a")
