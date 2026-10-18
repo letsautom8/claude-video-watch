@@ -12,6 +12,35 @@ of text to read.
 How it was built, and why it samples frames the way it does:
 [letsautom8.dev/posts/claude-watches-video](https://letsautom8.dev/posts/claude-watches-video/).
 
+## What Claude gets
+
+From [a 97-second YouTube Short](https://youtube.com/shorts/umysUJzRNL4) (one of the author's own), in 38 seconds:
+
+`hook.jpg`, the first 3 seconds, every 0.5 s:
+
+![Six frames from the first three seconds of the Short](docs/yt-hook.jpg)
+
+`sheet-1.jpg`, one frame per shot, labelled with the time:
+
+![Fifteen labelled frames, one per shot](docs/yt-sheet-1.jpg)
+
+`summary.md` (excerpt):
+
+```
+- Duration 97.3s · 1080×1920 · 30000/1001 fps · audio: yes
+- Shots: 30 (sensitivity 1.0) · average 3.2s · shortest 0.8s · longest 8.4s · 18 cuts/min
+- Speech: 271 words · 167 words/min over the whole video · talking 84% of the time · language en (99%)
+- Loudness: -14.1 LUFS integrated · silences ≥0.4s: 6
+
+## Transcript
+
+[0:00.0] One man survived two atomic bombs.
+[0:03.6] Not one, two.
+[0:04.8] His name was Tsutomu Yamaguchi, an engineer who designed oil tankers for Mitsubishi, summer
+[0:09.8] 1945.
+[0:11.2] He's in Hiroshima on a three -month work trip.
+```
+
 ## Install
 
 In Claude Code:
@@ -80,6 +109,9 @@ uv run skills/watch/scripts/watch.py <file or URL> --out ./watch-test \
   guessing.
 - **Transcripts make mistakes**, especially with the default `base` model, accents or
   music. Use `--model small` when the words matter.
+- **Platform copies differ.** The same reel downloaded from TikTok came back with 32 kbps
+  audio, and its transcript lost every sentence break; the Facebook copy didn't. When the
+  exact words matter, use the original file.
 
 ## Safety and fair use
 
