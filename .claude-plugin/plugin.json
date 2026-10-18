@@ -7,7 +7,7 @@
     "url": "https://letsautom8.dev"
   },
   "homepage": "https://letsautom8.dev/posts/claude-watches-video/",
-  "repository": "https://github.com/kukzeeww/claude-video-watch",
+  "repository": "https://github.com/letsautom8/claude-video-watch",
   "license": "MIT",
   "keywords": ["video", "transcript", "whisper", "ffmpeg", "yt-dlp"]
 }

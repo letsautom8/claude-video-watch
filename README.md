@@ -17,7 +17,7 @@ How it was built, and why it samples frames the way it does:
 In Claude Code:
 
 ```
-/plugin marketplace add kukzeeww/claude-video-watch
+/plugin marketplace add letsautom8/claude-video-watch
 /plugin install video-watch@letsautom8
 ```
 
