@@ -1,0 +1,13 @@
+{
+  "name": "video-watch",
+  "version": "1.0.0",
+  "description": "Let Claude watch a video: a link or file becomes labelled frames plus a timestamped transcript, made locally with ffmpeg and faster-whisper, so Claude can say what's in it and answer questions about it.",
+  "author": {
+    "name": "Marlon Cruz",
+    "url": "https://letsautom8.dev"
+  },
+  "homepage": "https://letsautom8.dev/posts/claude-watches-video/",
+  "repository": "https://github.com/kukzeeww/claude-video-watch",
+  "license": "MIT",
+  "keywords": ["video", "transcript", "whisper", "ffmpeg", "yt-dlp"]
+}
