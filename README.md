@@ -41,6 +41,35 @@ From [a 97-second YouTube Short](https://youtube.com/shorts/umysUJzRNL4) (one of
 [0:11.2] He's in Hiroshima on a three -month work trip.
 ```
 
+## How was it shot? `--study`
+
+Ask Claude how a video was shot, cut or framed and it runs the script with `--study`, the
+cinematography preset. The default view keeps one still per shot, so fast cuts and
+camera moves disappear. `--study` catches cuts down to about 0.2 s apart, takes an
+**in / mid / out** frame per shot (plus one every 0.5 s), and adds a shots table with a
+motion figure graded still, slight or strong:
+
+```
+| # | start | length | motion |
+|---|---|---|---|
+| 1 | 0:00.0 | 3.45s | 4.0 slight |
+| 2 | 0:03.5 | 1.30s | 5.6 slight |
+| 3 | 0:04.8 | 4.85s | 16.2 strong |
+| 4 | 0:09.6 | 3.90s | 9.8 slight |
+```
+
+That's the same Short: mostly gentle pushes on stills, with a few strong moves. On a
+fast-cut drama reel, a whip pan or dip to black trips the cut detector every frame; a run
+of shots under 0.5 s like that is merged into one row with an in and an out frame, while
+a lone quick cut keeps its own row:
+
+```
+| 3 | 0:07.5 | 1.55s | 93.5 strong · fast move / transition (9 fragments) |
+```
+
+It costs more to read (a one-minute fast-cut reel is about 9 or 10 contact sheets), so
+it's for craft questions, not "what is this video?".
+
 ## Install
 
 In Claude Code:
@@ -88,7 +117,7 @@ You can run the script without Claude too:
 
 ```sh
 uv run skills/watch/scripts/watch.py <file or URL> --out ./watch-test \
-  [--max-frames 30] [--sensitivity 1.0] [--model base]
+  [--max-frames 30] [--sensitivity 1.0] [--model base] [--study] [--referer URL]
 ```
 
 | Option | Default | What it does |
@@ -96,6 +125,15 @@ uv run skills/watch/scripts/watch.py <file or URL> --out ./watch-test \
 | `--max-frames` | 30 | Most shots to sample. Use 40 or so for videos over 10 minutes. |
 | `--sensitivity` | 1.0 | Cut detection. Higher finds more cuts. |
 | `--model` | base | faster-whisper model: `tiny`, `base`, `small`, `medium`, `large-v3`. Bigger is slower and more accurate. |
+| `--study` | off | Cinematography preset: `--motion --step 0.5 --min-gap 0.15 --max-frames 120`. Explicit flags win. |
+| `--motion` | off | In / mid / out frames per shot, a graded motion figure, and fast fragments merged into one row. |
+| `--min-gap` | 0.4 | Shortest gap between two cuts, in seconds (at least 0.1; under 0.2 samples at 20 fps). |
+| `--step` | 2 | Seconds between frames inside a long shot. |
+| `--referer` | | Page a Vimeo video is embedded on (plain `vimeo.com` links work without it). |
+
+## Tests
+
+`uv run tests/test_watch.py` (needs ffmpeg; no network, no speech model).
 
 ## Limits
 
@@ -105,7 +143,7 @@ uv run skills/watch/scripts/watch.py <file or URL> --out ./watch-test \
   (a download or a screen recording).
   YouTube works best with [deno](https://deno.com) installed (yt-dlp warns without it).
 - **What it can't perceive:** tone of voice, music and sound effects aren't transcribed,
-  and frames miss motion between samples. The skill tells Claude to say so instead of
+  and frames miss motion between samples (`--study` narrows that gap). The skill tells Claude to say so instead of
   guessing.
 - **Transcripts make mistakes**, especially with the default `base` model, accents or
   music. Use `--model small` when the words matter.

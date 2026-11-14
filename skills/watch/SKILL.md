@@ -25,6 +25,16 @@ uv run "${CLAUDE_SKILL_DIR}/scripts/watch.py" "<link or file>" --out <temp-dir>/
   Then say so and ask the user for the file (a screen recording works).
 - Long videos (over 10 minutes): add `--max-frames 40`. The transcript then carries most
   of the content, so read it first and the sheets after.
+- Vimeo: plain `vimeo.com/<id>` links are fetched through the player embed. For a Vimeo
+  video embedded on another site (a course page), add `--referer <that page's URL>`.
+- **How was it shot, cut or framed: add `--study`.** Default mode merges cuts under 0.4s
+  apart and keeps one still per shot, so fast cuts and camera moves vanish. `--study` is
+  `--motion --step 0.5 --min-gap 0.15 --max-frames 120`: cuts down to ~0.2s apart, and per
+  shot an **in / mid / out** frame (plus one every 0.5s) with a graded motion figure. A run
+  of back-to-back shots under 0.5s (a fast camera arc, whip pan or dip to black) becomes
+  one **fast move / transition** row; a lone quick cut keeps its own row. It costs more to
+  read (a 1-minute fast-cut reel is about 9-10 sheets), so use it only when the craft is
+  the question. `--min-gap`, `--step` and `--motion` also work alone; explicit flags win.
 - Poor transcript (heavy accent, music, several speakers): re-run with `--model small`
   (slower, more accurate). Too few or too many cuts: `--sensitivity 1.5` or `0.7`.
 
@@ -34,7 +44,12 @@ uv run "${CLAUDE_SKILL_DIR}/scripts/watch.py" "<link or file>" --out <temp-dir>/
    and the full transcript with timestamps.
 2. `hook.jpg`: the first 3 seconds (6 frames). This is how the video grabs attention.
 3. `sheet-N.jpg`: labelled frames across the whole video (one per shot, plus one every
-   2 seconds inside long shots).
+   2 seconds inside long shots). With `--study` each frame says its shot and place
+   (`#n in`, `#n mid`, `#n out`) and the summary has a **Shots** table (start, length,
+   motion) and a Mode line. Motion is graded **still** (under 3: locked off), **slight**
+   (3-12: a gentle drift or small push) or **strong** (over 12: a real pan, zoom, push or
+   busy action, or a cut the detector missed; compare the in and out frames). For a
+   **fast move / transition** row, its in and out frames show where the camera went.
 4. If a detail matters (a face, on-screen text, a product), open single frames from
    `frames/`, or grab one at a given time:
    `ffmpeg -ss 12.5 -i <out>/source/video.mp4 -frames:v 1 <out>/at-12.5.jpg`.
@@ -55,7 +70,7 @@ asked. If they gave no question, add whichever of these the video calls for:
   sources before calling them true or false.
 
 Say what you couldn't perceive. The transcript catches words but not tone of voice,
-music or sound effects, and frames miss motion between samples. If tone or music
+music or sound effects, and frames miss motion between samples (use `--study` when motion matters). If tone or music
 matters, say so rather than guessing.
 
 ## Safety
