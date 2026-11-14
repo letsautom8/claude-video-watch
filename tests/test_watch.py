@@ -265,6 +265,54 @@ class DefaultUnchanged(unittest.TestCase):
             self.assertEqual((new_out / rel).read_bytes(), (old_out / rel).read_bytes(), str(rel))
 
 
+def can_encode_av1() -> bool:
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True).stdout
+    return "libsvtav1" in out
+
+
+class ReservedColourAV1(unittest.TestCase):
+    """AV1 files (some Facebook reels) tagged with reserved colour primaries made every ffmpeg frame grab fail
+    with exit 211 ("Unsupported input" in swscale); watch.py must still cut and grab them."""
+
+    @classmethod
+    def setUpClass(cls):
+        if not can_encode_av1():
+            raise unittest.SkipTest("ffmpeg has no libsvtav1 encoder")
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.dir = Path(cls.tmp.name)
+        cls.video = cls.dir / "av1.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-y",
+                        "-f", "lavfi", "-i", "color=red:s=64x112:r=10:d=1",
+                        "-f", "lavfi", "-i", "color=blue:s=64x112:r=10:d=1",
+                        "-filter_complex", "[0][1]concat=n=2:v=1:a=0[v]", "-map", "[v]",
+                        "-c:v", "libsvtav1", "-preset", "12", "-pix_fmt", "yuv420p",
+                        "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+                        "-bsf:v", "av1_metadata=color_primaries=3", str(cls.video)], check=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_fixture_has_reserved_primaries(self):
+        v = next(s for s in watch.probe(self.video)["streams"] if s["codec_type"] == "video")
+        self.assertEqual((v["codec_name"], v["color_primaries"]), ("av1", "reserved"))
+        self.assertEqual(watch.input_fix(self.video), ("-bsf:v", "av1_metadata=color_primaries=2"))
+
+    def test_grab_and_cuts(self):
+        self.assertTrue(watch.grab(self.video, 0.5, self.dir / "f.jpg"))
+        cuts = watch.scene_cuts(self.video, 1.0)
+        self.assertEqual(len(cuts), 1)
+        self.assertAlmostEqual(cuts[0], 1.0, delta=0.15)
+
+    def test_whole_run(self):
+        self.assertIn("Shots: 2", run_watch(SCRIPTS / "watch.py", self.video, self.dir / "out"))
+
+    def test_normal_file_untouched(self):
+        plain = self.dir / "plain.mp4"
+        make_video(plain)
+        self.assertEqual(watch.input_fix(plain), ())
+
+
 class Vimeo(unittest.TestCase):
     P = "https://player.vimeo.com/video/"
 

@@ -26,6 +26,7 @@ Needs ffmpeg and ffprobe on PATH, and uv (which also runs yt-dlp for links).
 How Claude should use the output is in ../SKILL.md.
 """
 import argparse
+import functools
 import json
 import re
 import shutil
@@ -61,6 +62,28 @@ def probe(video: Path) -> dict:
     return json.loads(out)
 
 
+# ffprobe field -> av1_metadata option. Some platforms (Facebook reels, for one) serve AV1 tagged
+# with "reserved" colour primaries; ffmpeg 8's scaler refuses them ("Unsupported input", exit 211),
+# so every frame grab failed. Retagging those fields "unspecified" (2) on input lets them decode.
+RESERVED_TAGS = {"color_primaries": "color_primaries", "color_transfer": "transfer_characteristics",
+                 "color_space": "matrix_coefficients"}
+
+
+@functools.cache
+def input_fix(video: Path) -> tuple[str, ...]:
+    """Input options that make an AV1 file with reserved colour tags decodable; () for anything
+    else, so normal files run exactly the same ffmpeg command as before."""
+    try:
+        streams = probe(video)["streams"]
+    except (subprocess.CalledProcessError, ValueError, KeyError):
+        return ()
+    v = next((s for s in streams if s.get("codec_type") == "video"), {})
+    bad = [opt for field, opt in RESERVED_TAGS.items() if v.get(field) == "reserved"]
+    if v.get("codec_name") != "av1" or not bad:
+        return ()
+    return ("-bsf:v", "av1_metadata=" + ":".join(f"{opt}=2" for opt in bad))
+
+
 def cut_fps(min_gap: float) -> int:
     """Sampling rate for cut detection. 10 fps (0.1s apart) resolves cuts down to ~0.2s apart;
     closer than that two cuts can fall between neighbouring samples, so sample at 20 fps."""
@@ -76,7 +99,7 @@ def scene_cuts(video: Path, sensitivity: float, min_gap: float = 0.4) -> list[fl
     """
     import numpy as np
     w, h, fps = 36, 64, cut_fps(min_gap)
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(video), "-vf", f"fps={fps},scale={w}:{h},format=gray",
+    raw = subprocess.run(["ffmpeg", "-v", "error", *input_fix(video), "-i", str(video), "-vf", f"fps={fps},scale={w}:{h},format=gray",
                           "-f", "rawvideo", "-"], capture_output=True, check=True).stdout
     frames = np.frombuffer(raw, np.uint8).reshape(-1, h, w).astype(np.float32)
     diff = np.abs(np.diff(frames, axis=0)).mean(axis=(1, 2))
@@ -128,7 +151,7 @@ def clamp(t: float, end: float, fps: float) -> float:
 
 def grab(video: Path, t: float, out: Path) -> bool:
     """Write one frame at t; False (with a warning) if ffmpeg wrote nothing, e.g. past the last frame."""
-    ff("-y", "-ss", f"{t:.3f}", "-i", str(video), "-frames:v", "1", "-vf", f"scale={THUMB_W}:-2", str(out))
+    ff("-y", "-ss", f"{t:.3f}", *input_fix(video), "-i", str(video), "-frames:v", "1", "-vf", f"scale={THUMB_W}:-2", str(out))
     if out.exists():
         return True
     print(f"warning: no frame at {t:.2f}s, skipped")
